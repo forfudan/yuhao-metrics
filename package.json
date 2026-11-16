@@ -1,0 +1,99 @@
+{
+  "name": "@forfudan/yuhao-metrics",
+  "version": "0.3.0",
+  "description": "Metrics calculation library for Chinese input methods",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./stats": {
+      "types": "./dist/stats/index.d.ts",
+      "import": "./dist/stats/index.js",
+      "require": "./dist/stats/index.cjs",
+      "default": "./dist/stats/index.js"
+    },
+    "./charset": {
+      "types": "./dist/charset/index.d.ts",
+      "import": "./dist/charset/index.js",
+      "require": "./dist/charset/index.cjs",
+      "default": "./dist/charset/index.js"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "import": "./dist/data/index.js",
+      "require": "./dist/data/index.cjs",
+      "default": "./dist/data/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.cjs",
+      "default": "./dist/types/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "wasm-node",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@9.3.0",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "pnpm run build:wasm && pnpm run build:wasm:node && tsc --noEmit && vite build",
+    "build:wasm": "cd rust/wasm && wasm-pack build --target web --out-dir ../../wasm",
+    "build:wasm:node": "cd rust/wasm && wasm-pack build --target nodejs --out-dir ../../wasm-node",
+    "test": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:ui": "vitest --ui",
+    "test:rust": "cd rust && cargo test",
+    "lint": "eslint ts tests --ext .ts",
+    "lint:rust": "cd rust && cargo clippy --workspace --all-targets",
+    "prepublishOnly": "pnpm run build",
+    "prepack": "rm -f wasm/.gitignore wasm-node/.gitignore",
+    "build:py": "cd rust/py && maturin develop --release"
+  },
+  "keywords": [
+    "chinese-input-method",
+    "ime-metrics",
+    "duplicate-rate",
+    "typing-efficiency",
+    "yuhao",
+    "wubi",
+    "zigen",
+    "input-method-editor"
+  ],
+  "author": "forfudan",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forfudan/yuhao-metrics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/forfudan/yuhao-metrics/issues"
+  },
+  "homepage": "https://github.com/forfudan/yuhao-metrics#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vite-plugin-dts": "^3.7.1",
+    "vitest": "^1.2.1"
+  }
+}

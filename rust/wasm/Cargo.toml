@@ -1,0 +1,32 @@
+# wasm 綁定。這裏只有序列化，算法一律在 yuhao-metrics-core。
+#
+# crate 名字決定產物文件名：`yuhao_metrics.js` / `yuhao_metrics_bg.wasm`，
+# 跟 npm 包名 @forfudan/yuhao-metrics 對得上。
+[package]
+name = "yuhao-metrics"
+description = "wasm bindings for yuhao-metrics-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+yuhao-metrics-core = { path = "../core" }
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+# ⚠️ **`float_roundtrip` 不能去掉**：沒有它 serde_json 的
+# 快速浮點解析會差一個 ULP，而 TS 那邊的輸入是 `JSON.stringify` 出來的雙精度。
+# 實測：字頻 4.199995564804684e-8 解析成 …43e-8，於是鍵位熱力有兩個鍵對不上
+# 網站原本那份 JS 實現（相對差 1.1e-16）。開了這個 feature 纔逐位相同。
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+serde-wasm-bindgen = "0.6"
+# 只在 `--features console_error_panic_hook` 下編進去。舊 lib.rs 的 `init()` 一直
+# 引用這個 feature，但依賴從來沒聲明過，於是 cfg 恆假、鉤子從未裝上——wasm 裏
+# panic 只會得到一句 unreachable。
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+default = ["console_error_panic_hook"]

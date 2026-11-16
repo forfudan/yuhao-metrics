@@ -1,0 +1,18 @@
+# PyO3 綁定。同樣只有轉換，算法在 yuhao-metrics-core。
+#
+# 模塊名 `yuhao_metrics`：Python 側寫 `import yuhao_metrics as ym`。
+[package]
+name = "yuhao-metrics-py"
+description = "Python bindings for yuhao-metrics-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "yuhao_metrics"
+crate-type = ["cdylib"]
+
+[dependencies]
+yuhao-metrics-core = { path = "../core" }
+pyo3 = { version = "0.26", features = ["extension-module"] }

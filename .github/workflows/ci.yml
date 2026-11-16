@@ -1,0 +1,81 @@
+# 測試：Rust 的算法、TypeScript 的綁定，以及「包裏到底有什麼」。
+#
+# TS 的測試會載 wasm，而 `wasm/`、`wasm-node/` 是構建產物、不在倉裏，所以**必須先
+# 編 wasm 再跑 TS 測試**，次序錯了的話只有 `utils.test.ts` 能過，其餘整批報
+# 「WASM 加載失敗」。wasm-pack 用發佈頁的預編譯二進制（幾秒），`cargo install`
+# 要三分鐘。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  WASM_PACK_VERSION: 0.13.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm 的版本由 package.json 的 `packageManager` 定；這裏再寫一個 version
+      # 會與它相撞。
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Rust ＋ wasm 目標
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup component add clippy
+          rustc --version
+
+      - name: wasm-pack
+        run: |
+          curl -sSfL "https://github.com/rustwasm/wasm-pack/releases/download/v${WASM_PACK_VERSION}/wasm-pack-v${WASM_PACK_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar -xz --strip-components=1 -C /usr/local/bin --wildcards '*/wasm-pack'
+          wasm-pack --version
+
+      - name: 算法的測試（core 不帶綁定，所以測得到）
+        run: cd rust && cargo test -p yuhao-metrics-core
+
+      - name: clippy
+        run: cd rust && cargo clippy --workspace --all-targets -- -D warnings
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 構建（wasm ×2 → 類型檢查 → vite）
+        run: pnpm run build
+
+      - name: TS 的測試（不含要聯網的集成測試）
+        run: pnpm test run
+
+      - run: pnpm run lint
+
+      - name: 包裏必須有 wasm
+        # 少了 wasm 的包裝上去就是「WASM 加載失敗」，而這一步只數檔名，秒級。
+        # `prepack` 會刪掉 wasm-pack 寫在 out-dir 裏的 `.gitignore`——不刪的話
+        # npm 按目錄認它，那兩個目錄一個檔都進不了包。
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          grep -q "wasm/yuhao_metrics_bg.wasm" /tmp/pack.txt
+          grep -q "wasm-node/yuhao_metrics_bg.wasm" /tmp/pack.txt
+
+      - name: CJS 與 ESM 兩條路都要載得進來
+        # 本包是 `"type": "module"`，所以 CJS 產物必須是 `.cjs`——叫 `.cjs.js` 的話
+        # Node 按擴展名判成 ESM，`require()` 的人當場 `exports is not defined`，
+        # 而打包器按內容判、vitest 只走 ESM，這個洞不會被別的測試照出來。
+        run: |
+          node --input-type=module -e "
+            const m = await import('./dist/index.js')
+            if (typeof m.calculateKeyCounts !== 'function') throw new Error('ESM 導出不全')
+          "
+          node --input-type=commonjs -e "
+            const m = require('./dist/index.cjs')
+            if (typeof m.calculateKeyCounts !== 'function') throw new Error('CJS 導出不全')
+          "

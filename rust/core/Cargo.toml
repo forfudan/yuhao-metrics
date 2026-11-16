@@ -1,0 +1,13 @@
+[package]
+name = "yuhao-metrics-core"
+description = "Schema-agnostic scoring core for Chinese input methods（重碼 · 當量 · 選重 · 人機工程 · 簡碼效率）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1.0"

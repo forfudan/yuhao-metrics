@@ -1,0 +1,6 @@
+# Normalise line endings so a macOS/Windows switch never shows a whole-file
+# diff on a machine with core.autocrlf=true.
+* text=auto eol=lf
+
+# Never touch the wasm binaries that wasm-pack writes.
+*.wasm binary

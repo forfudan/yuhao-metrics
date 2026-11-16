@@ -1,0 +1,20 @@
+# 三個 crate，一條規矩：算法只寫在 core 裏，wasm/ 和 py/ 只做序列化。
+#
+# 為什麼要分開：`#[wasm_bindgen]` 的函數在非 wasm 目標上一調就 panic，所以只要
+# 算法和綁定住在同一個 crate 裏，`cargo test` 就測不到算法本身——2026-08-13 之前
+# 這裏的兩個 #[test] 就是這樣，只斷言 `result.is_ok()`，從來沒真跑過計算。
+# 現在 core 不依賴 wasm-bindgen，也不依賴 pyo3，於是它是可以直接測的普通 Rust。
+[workspace]
+resolver = "2"
+members = ["core", "wasm", "py"]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/forfudan/yuhao-metrics"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

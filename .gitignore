@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Rust/WASM
+rust/target/
+rust/Cargo.lock
+# ⚠️ 這兩條要帶前導斜槓：不帶的話 `wasm/` 會匹配**任何一層**叫 wasm 的目錄，
+# 把 `rust/wasm/`（wasm-bindgen 殼子那個 crate）也一起忽略掉——那個 crate 因此
+# 從倉裏消失過，而 `rust/Cargo.toml` 的 members 裏寫着它，clone 下來 cargo 直接失敗。
+/wasm/
+/wasm-node/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

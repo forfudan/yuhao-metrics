@@ -1,0 +1,19 @@
+# maturin 的構建配置。`maturin develop --release` 裝進當前 Python 環境，
+# 之後 `import yuhao_metrics`。
+#
+# 版本號跟 Cargo 工作區走（`rust/Cargo.toml` 的 workspace.package.version），
+# 這裏不再寫一遍——寫兩遍必然有一天對不上。
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "yuhao-metrics"
+description = "Schema-agnostic scoring for Chinese input methods（重碼 · 當量 · 選重 · 人機工程 · 簡碼效率）"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dynamic = ["version"]
+
+[tool.maturin]
+module-name = "yuhao_metrics"
+features = ["pyo3/extension-module"]

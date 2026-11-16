@@ -1,0 +1,84 @@
+# 發包到 npm。推一個 `v*` 標籤觸發，也可以在 Actions 頁面手動跑。
+#
+# 為什麼不在本機發：wasm 要 `wasm32-unknown-unknown` 目標和 wasm-pack，而裝了
+# Homebrew rust 的機器上 `rustc` 會搶在 rustup 前面，wasm-pack 就挑到一個沒有
+# wasm 目標的工具鏈。runner 上是乾淨的 rustup，一條命令就齊。
+#
+# 需要一個倉庫 secret：`NPM_TOKEN`（npm 的 Automation token，有發佈權限）。
+name: publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+env:
+  WASM_PACK_VERSION: 0.13.1
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm 的版本由 package.json 的 `packageManager` 定；這裏再寫一個 version
+      # 會與它相撞。
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: 標籤與 package.json 的版本必須一致
+        # 不對就停：npm 認的是 package.json 那個號，標籤只是觸發器。不一致會把
+        # `v0.4.0` 發成 0.3.0，或者撞 409 而看不出為什麼。
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          echo "標籤 $tag / package.json $pkg"
+          test "$tag" = "$pkg"
+
+      - name: Rust ＋ wasm 目標
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustc --version
+
+      - name: wasm-pack
+        # 版本釘住：本機驗過的就是 0.13.1。拿發佈頁的預編譯二進制，幾秒；
+        # `cargo install` 要三分鐘。
+        run: |
+          curl -sSfL "https://github.com/rustwasm/wasm-pack/releases/download/v${WASM_PACK_VERSION}/wasm-pack-v${WASM_PACK_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar -xz --strip-components=1 -C /usr/local/bin --wildcards '*/wasm-pack'
+          wasm-pack --version
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 算法的測試（core 是純 Rust，不帶綁定）
+        run: cd rust && cargo test -p yuhao-metrics-core
+
+      - name: 構建（wasm ×2 → 類型檢查 → vite）
+        run: pnpm run build
+
+      - name: TS 的測試
+        run: pnpm test run
+
+      - name: 數一眼包裏有什麼
+        # `wasm/` 與 `wasm-node/` 必須在包裏（見 README 裏 prepack 那一條）：
+        # 少了它們，裝上去就是「WASM 加載失敗」。
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          grep -q "wasm/yuhao_metrics_bg.wasm" /tmp/pack.txt
+          grep -q "wasm-node/yuhao_metrics_bg.wasm" /tmp/pack.txt
+
+      - name: 發
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
